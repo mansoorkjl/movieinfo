@@ -11,10 +11,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class ReviewService {
     @Autowired
-    private ReviewRepository reviewRepository;
+    ReviewRepository reviewRepository;
 
     @Autowired
-    private MongoTemplate mongoTemplate;
+    MongoTemplate mongoTemplate;
 
     @CacheEvict(value = "movies", key = "#imdbId")
     public Review createReview(String reviewBody, String imdbId) {
