@@ -4,6 +4,9 @@ package com.manchu.movieinfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -12,7 +15,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Map;
-
+import java.util.HashMap;
+import java.util.stream.Stream;
 
 //import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -50,12 +54,30 @@ public class ReviewControllerTest {
 
     @Test
     void Z_zeroPayload_returnsBadRequest() throws Exception {
+        Mockito.when(reviewService.createReview(null, null))
+                        .thenThrow(new IllegalArgumentException("Review Body must not be blank"));
         mockMvc.perform(post("/api/v1/reviews")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest());
     }
 
+
+    @ParameterizedTest // Testing parameterized test by sending stream of invalid payload body
+    @MethodSource("invalidPayloads")
+    void Z_partialPayloads_returnBadRequest(String reviewBody, String imdbId) throws Exception {
+        Mockito.when(reviewService.createReview(reviewBody, imdbId))
+                .thenThrow(new IllegalArgumentException("Missing fields"));
+
+        Map<String, String> payload = new HashMap<>();
+        if (reviewBody != null) payload.put("reviewBody", reviewBody);
+        if (imdbId != null) payload.put("imdbId", imdbId);
+
+        mockMvc.perform(post("/api/v1/reviews")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest());
+    }
 
     @Test
     void E_exceptionInService_returns500() throws Exception {
@@ -71,5 +93,13 @@ public class ReviewControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(payload)))
                 .andExpect(status().isInternalServerError());
+    }
+
+    private static Stream<Arguments> invalidPayloads() {
+        return Stream.of(
+                Arguments.of(null, "tt1234567"),     // Missing reviewBody
+                Arguments.of("Great movie!", null),  // Missing imdbId
+                Arguments.of(null, null)             // Both missing
+        );
     }
 }

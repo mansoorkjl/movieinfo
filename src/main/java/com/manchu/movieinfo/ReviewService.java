@@ -22,6 +22,10 @@ public class ReviewService {
            throw new IllegalArgumentException("Review Body must not be blank");
        }
 
+       if (imdbId == null || imdbId.trim().isEmpty() ) {
+           throw new IllegalArgumentException("imdbIB value must not be empty");
+       }
+
        Review review = reviewRepository.insert(new Review(reviewBody));
 
        mongoTemplate.update(Movie.class)
